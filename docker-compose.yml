@@ -1,0 +1,41 @@
+services:
+  redis-master:
+    image: redis:alpine
+    container_name: redis-master
+    command: redis-server --appendonly yes --save 60 1 --maxmemory ${REDIS_MAX_MEMORY} --maxmemory-policy ${REDIS_EVICTION_POLICY}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-master-data:/data
+    env_file:
+      - .env
+
+  redis-slave:
+    image: redis:alpine
+    container_name: redis-slave
+    command: redis-server --slaveof redis-master 6379 --appendonly yes --save 60 1 --maxmemory ${REDIS_MAX_MEMORY} --maxmemory-policy ${REDIS_EVICTION_POLICY}
+    depends_on:
+      - redis-master
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis-slave-data:/data
+    env_file:
+      - .env
+
+  app:
+    build: .
+    container_name: app
+    command: node app.js
+    ports:
+      - "3000:3000"
+    depends_on:
+      - redis-master
+    volumes:
+      - .:/usr/src/app
+    env_file:
+      - .env
+
+volumes:
+  redis-master-data:
+  redis-slave-data:
